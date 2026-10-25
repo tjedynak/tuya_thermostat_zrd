@@ -22,6 +22,8 @@
 #define R0D_DEADZONE_MAX      50 // * 10
 #define R0D_CALIBRATION_MIN   -100 // * 10
 #define R0D_CALIBRATION_MAX   100 // * 10
+#define R0D_EXT_CALIBRATION_MIN -100 // * 10, software offset of the outer (floor) sensor
+#define R0D_EXT_CALIBRATION_MAX 100 // * 10
 
 #define BRIGHTNESS_LEVELS 4
 static const uint8_t brightness_levels[BRIGHTNESS_LEVELS] =
@@ -50,6 +52,16 @@ data_point_st_t* init_datapoint_model0D() {
     data_point_model_common[DP_IDX_TEMP_OUT].len = 4;
     data_point_model_common[DP_IDX_TEMP_OUT].divisor = 10;
     data_point_model_common[DP_IDX_TEMP_OUT].local_cmd = local_cmd_outdoor_sensor_0D;
+
+    // The MCU applies DP 0x65 to both sensors and has no DP for the outer one,
+    // so the outer sensor offset is applied here in the module (attribute 0xF00C).
+    // id stays 0 on purpose: remote_cmd_ext_temp_calibration_0D must not return on id == 0.
+    data_point_model_common[DP_IDX_EXT_CALIBRATION].id = DP_TYPE0D_ID_00;
+    data_point_model_common[DP_IDX_EXT_CALIBRATION].type = DP_VAL;
+    data_point_model_common[DP_IDX_EXT_CALIBRATION].divisor = 1;
+    data_point_model_common[DP_IDX_EXT_CALIBRATION].remote_cmd = remote_cmd_ext_temp_calibration_0D;
+    data_point_model_common[DP_IDX_EXT_CALIBRATION].arg1 = R0D_EXT_CALIBRATION_MIN;
+    data_point_model_common[DP_IDX_EXT_CALIBRATION].arg2 = R0D_EXT_CALIBRATION_MAX;
 
     data_point_model_common[DP_IDX_SETPOINT].id = DP_TYPE0D_ID_32;
     data_point_model_common[DP_IDX_SETPOINT].type = DP_VAL;
@@ -488,4 +500,65 @@ void local_cmd_led_indicator_0D(void* args) {
         (uint8_t*)mode);
 
     thermostat_settings_save();
+}
+
+/* Last outer sensor value from the MCU, before the software offset, in 0.01°C */
+static int16_t outdoor_raw_0D = 0;
+static uint8_t outdoor_raw_valid_0D = 0;
+
+static void outdoor_publish_0D(void) {
+    // Nothing to correct until the MCU has reported the outer sensor at least once
+    if(!outdoor_raw_valid_0D) return;
+
+    // extTemperatureCalibration is stored as uint8_t, the value is int8_t in 0.1°C
+    int16_t calibration = (int8_t)g_zcl_thermostatAttrs.extTemperatureCalibration;
+    int16_t temp = outdoor_raw_0D + calibration * 10;
+
+    zcl_setAttrVal(
+        APP_ENDPOINT1,
+        ZCL_CLUSTER_HAVC_THERMOSTAT,
+        ZCL_ATTRID_HVAC_THERMOSTAT_OUTDOOR_TEMPERATURE,
+        (uint8_t*)&temp);
+
+#if UART_PRINTF_MODE && DEBUG_CMD
+    printf("OutDoor Temperature: %d, raw: %d, ext calibration: %d\r\n", temp, outdoor_raw_0D, calibration);
+#endif
+}
+
+void local_cmd_outdoor_sensor_0D(void* args) {
+    int16_t* temp = (int16_t*)args;
+    uint16_t divisor = 1;
+
+    if(data_point_model[DP_IDX_TEMP_OUT].divisor == 1) {
+        divisor = 100;
+    } else if(data_point_model[DP_IDX_TEMP_OUT].divisor == 10) {
+        divisor = 10;
+    }
+
+    outdoor_raw_0D = *temp * divisor;
+    outdoor_raw_valid_0D = 1;
+
+    outdoor_publish_0D();
+}
+
+void remote_cmd_ext_temp_calibration_0D(void* args) {
+    int8_t temp = *(int8_t*)args;
+
+    if(temp < data_point_model[DP_IDX_EXT_CALIBRATION].arg1) temp = data_point_model[DP_IDX_EXT_CALIBRATION].arg1;
+    if(temp > data_point_model[DP_IDX_EXT_CALIBRATION].arg2) temp = data_point_model[DP_IDX_EXT_CALIBRATION].arg2;
+
+#if UART_PRINTF_MODE && DEBUG_CMD
+    printf("Ext temperature calibration remote: %d\r\n", temp);
+#endif
+
+    // The stack has already stored the written value, store it again after clamping
+    zcl_setAttrVal(
+        APP_ENDPOINT1,
+        ZCL_CLUSTER_HAVC_THERMOSTAT,
+        ZCL_ATTRID_HVAC_THERMOSTAT_CUSTOM_EXT_TEMP_CALIBRATION,
+        (uint8_t*)&temp);
+
+    thermostat_settings_save();
+
+    outdoor_publish_0D();
 }

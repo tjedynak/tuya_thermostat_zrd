@@ -332,6 +332,8 @@ Thanks :))))
 	- Added Moes Star Ring thermostat with signature `_TZE204_lpedvtvr` [#195](https://github.com/slacky1965/tuya_thermostat_zrd/pull/195)
 	- Add coolmode to model 7 [#201](https://github.com/slacky1965/tuya_thermostat_zrd/pull/201)
 	- Added announcement at startup.
+- 1.0.24
+	- Model r0D `_TZE204_lpedvtvr`: added software calibration of the outer (floor) sensor `external_temperature_calibration`. The MCU applies `local_temperature_calibration` to both sensors, this offset is added on top of it for the floor sensor only.
 
 [Top](#Top)
 
