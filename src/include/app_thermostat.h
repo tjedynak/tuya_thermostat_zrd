@@ -473,6 +473,7 @@ void remote_cmd_oper_mode_0D(void *args);
 void remote_cmd_level_0D(void *args);
 void remote_cmd_screen_off_time_0D(void* args);
 void remote_cmd_led_indicator_0D(void* args);
+void remote_cmd_ext_temp_calibration_0D(void *args);
 
 /*
  * common functions local_cmd
@@ -807,7 +808,6 @@ void local_cmd_humidity_offset_0C(void *args);
 #define local_cmd_onoff_state_0D        local_cmd_onoff_state
 #define local_cmd_frost_protect_0D      local_cmd_frost_protect_2
 #define local_cmd_heat_protect_0D       local_cmd_heat_protect_2
-#define local_cmd_outdoor_sensor_0D     local_cmd_outdoor_sensor_2
 #define local_cmd_set_schedule_0D       local_cmd_set_schedule_2
 #define local_cmd_eco_mode_0D           local_cmd_eco_mode_3
 #define local_cmd_eco_mode_temp_0D      local_cmd_eco_mode_cool_temp_7
@@ -817,6 +817,7 @@ void local_cmd_oper_mode_0D(void* args);
 void local_cmd_level_0D(void* args);
 void local_cmd_screen_off_time_0D(void* args);
 void local_cmd_led_indicator_0D(void* args);
+void local_cmd_outdoor_sensor_0D(void *args);
 
 
 #endif /* SRC_INCLUDE_APP_THERMOSTAT_H_ */
