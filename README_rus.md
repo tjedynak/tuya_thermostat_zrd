@@ -280,6 +280,8 @@ P.S. В реальной работе не проверялось, требуе�
 	- Добавлен Moes Star Ring термостат с сигнатурой `_TZE204_lpedvtvr` [#195](https://github.com/slacky1965/tuya_thermostat_zrd/pull/195)
 	- Добавлен режим `coolmode` для модели R07 [#201](https://github.com/slacky1965/tuya_thermostat_zrd/pull/201)
 	- Добавлен анонс при старте.
+- 1.0.24
+	- Модель r0D `_TZE204_lpedvtvr`: добавлена программная калибровка внешнего (напольного) датчика `external_temperature_calibration`. MCU применяет `local_temperature_calibration` к обоим датчикам, эта поправка добавляется сверху только к напольному датчику.
 	
 [Наверх](#Top)
 
